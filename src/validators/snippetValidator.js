@@ -18,3 +18,4 @@ const validateSnippet = [
 ];
 
 export { validateSnippet };
+

@@ -18,4 +18,4 @@ router.route('/:id')
   .put(protect, validateSnippet, updateSnippet)
   .delete(protect, deleteSnippet);
 
-export default 
+export default router;
