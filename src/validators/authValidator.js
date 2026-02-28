@@ -13,3 +13,13 @@ export const registerValidation = [
     .isLength({ min: 6 })
     .withMessage("La contraseña debe tener mínimo 6 caracteres"),
 ];
+
+export const loginValidation = [
+  body("email")
+    .isEmail()
+    .withMessage("Email inválido"),
+
+  body("password")
+    .notEmpty()
+    .withMessage("La contraseña es obligatoria"),
+];
