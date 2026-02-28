@@ -3,6 +3,7 @@ import express from "express";
 import connectDB from "./config/db.js";
 import { errorHandler } from "./middleware/errorMiddleware.js";
 import authRoutes from "./routes/authRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
 import testRoutes from "./routes/testRoutes.js";
 
 // Cargar variables de entorno
@@ -30,6 +31,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/test", testRoutes);
+app.use("/api/products", productRoutes);
 
 // Middleware global de errores
 app.use(errorHandler);
