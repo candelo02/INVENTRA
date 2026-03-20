@@ -1,0 +1,718 @@
+openapi: 3.0.3
+info:
+  title: Inventario API
+  description: |
+    API REST para gestión de inventario con autenticación JWT.
+    
+    > ⚠️ **Nota:** Las rutas de `/products` están definidas en `productRoutes.js` pero
+    > **no se encuentran registradas en `app.js`**. Deben agregarse para funcionar.
+  version: 1.0.0
+  contact:
+    name: Inventario Backend
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Servidor de desarrollo
+
+# ─────────────────────────────────────────────
+# SECURITY
+# ─────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ─────────────────────────────────────────────
+  # SCHEMAS
+  # ─────────────────────────────────────────────
+  schemas:
+
+    # ── Auth ──────────────────────────────────
+    RegisterInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: Juan Pérez
+        email:
+          type: string
+          format: email
+          example: juan@example.com
+        password:
+          type: string
+          minLength: 6
+          example: secret123
+        role:
+          type: string
+          enum: [admin, empleado]
+          default: empleado
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: juan@example.com
+        password:
+          type: string
+          example: secret123
+
+    AuthResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 664f1a2b3c4d5e6f7a8b9c0d
+        name:
+          type: string
+          example: Juan Pérez
+        email:
+          type: string
+          example: juan@example.com
+        role:
+          type: string
+          enum: [admin, empleado]
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    # ── Product ───────────────────────────────
+    ProductInput:
+      type: object
+      required: [name, quantity, price]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          example: Tornillo M8
+        quantity:
+          type: integer
+          minimum: 0
+          example: 100
+        price:
+          type: number
+          format: float
+          minimum: 0.01
+          example: 1.50
+        category:
+          type: string
+          default: General
+          example: Ferretería
+        lowStockThreshold:
+          type: integer
+          default: 5
+          example: 10
+
+    Product:
+      allOf:
+        - $ref: '#/components/schemas/ProductInput'
+        - type: object
+          properties:
+            _id:
+              type: string
+              example: 664f1a2b3c4d5e6f7a8b9c0d
+            user:
+              type: string
+              description: ObjectId del dueño
+              example: 664f1a2b3c4d5e6f7a8b9c01
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    ProductListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 5
+        totalValue:
+          type: number
+          example: 1500.75
+        lowStockCount:
+          type: integer
+          example: 2
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        lowStockAlerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+
+    ProductResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Product'
+
+    # ── Movement ──────────────────────────────
+    MovementInput:
+      type: object
+      required: [type, quantity]
+      properties:
+        type:
+          type: string
+          enum: [entrada, salida]
+          example: entrada
+        quantity:
+          type: integer
+          minimum: 1
+          example: 20
+        description:
+          type: string
+          example: Compra a proveedor XYZ
+
+    Movement:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 664f1a2b3c4d5e6f7a8b9c0e
+        product:
+          type: string
+          description: ObjectId del producto
+          example: 664f1a2b3c4d5e6f7a8b9c0d
+        user:
+          type: string
+          description: ObjectId del usuario
+          example: 664f1a2b3c4d5e6f7a8b9c01
+        type:
+          type: string
+          enum: [entrada, salida]
+        quantity:
+          type: integer
+          minimum: 1
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MovementResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Movement'
+        newQuantity:
+          type: integer
+          example: 120
+
+    MovementListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 10
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Movement'
+
+    # ── Snippet ───────────────────────────────
+    SnippetInput:
+      type: object
+      required: [title, language, code]
+      properties:
+        title:
+          type: string
+          example: Conexión a MongoDB
+        language:
+          type: string
+          example: javascript
+        code:
+          type: string
+          example: "mongoose.connect(process.env.MONGO_URI)"
+        tags:
+          type: array
+          items:
+            type: string
+          example: [mongodb, backend]
+
+    Snippet:
+      allOf:
+        - $ref: '#/components/schemas/SnippetInput'
+        - type: object
+          properties:
+            _id:
+              type: string
+              example: 664f1a2b3c4d5e6f7a8b9c0f
+            user:
+              type: string
+              example: 664f1a2b3c4d5e6f7a8b9c01
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    # ── Errores ───────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Recurso no encontrado
+        stack:
+          type: string
+          description: Solo visible en entorno de desarrollo
+          example: "Error: Recurso no encontrado\n    at ..."
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: email
+              message:
+                type: string
+                example: Debe ser un email válido
+
+  # ─────────────────────────────────────────────
+  # RESPONSES REUTILIZABLES
+  # ─────────────────────────────────────────────
+  responses:
+    Unauthorized:
+      description: Token JWT ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: Not authorized, no token
+
+    Forbidden:
+      description: El recurso no pertenece al usuario autenticado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: No autorizado
+
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: Producto no encontrado
+
+    ValidationError:
+      description: Error de validación en el body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+
+# ─────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────
+paths:
+
+  # ════════════════════════════════════════════
+  # AUTH  (registrado en app.js ✅)
+  # ════════════════════════════════════════════
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrar nuevo usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: El usuario ya existe o datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                userExists:
+                  value:
+                    message: User already exists
+                invalidData:
+                  value:
+                    message: Invalid user data
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión y obtener JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Invalid email or password
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ════════════════════════════════════════════
+  # PRODUCTS  (⚠️ NO registrado en app.js aún)
+  # ════════════════════════════════════════════
+  /products:
+    get:
+      tags: [Products]
+      summary: Obtener todos los productos del usuario autenticado
+      description: Retorna el inventario con valor total y alertas de stock bajo.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Products]
+      summary: Crear un nuevo producto
+      description: Si `quantity > 0`, también registra un movimiento de entrada inicial.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /products/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: ObjectId del producto
+
+    put:
+      tags: [Products]
+      summary: Actualizar producto (actualización parcial)
+      description: |
+        Actualiza los campos enviados. Si `quantity` cambia, registra automáticamente
+        un movimiento de entrada o salida.
+        
+        > ⚠️ **Convención REST:** Este endpoint realiza actualización parcial;
+        > debería usar el método `PATCH` en lugar de `PUT`.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [Products]
+      summary: Eliminar producto
+      description: |
+        > ⚠️ **Bug conocido:** `deleteProduct` no está correctamente exportado en
+        > `productController.js`. El cuerpo de la función quedó fuera del closure.
+        > Este endpoint fallará en runtime hasta que se corrija.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Producto eliminado (debería ser 204 No Content)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Producto eliminado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Movements ─────────────────────────────
+  /products/movements:
+    get:
+      tags: [Movements]
+      summary: Historial general de todos los movimientos del usuario
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de movimientos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /products/{id}/movements:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: ObjectId del producto
+
+    get:
+      tags: [Movements]
+      summary: Historial de movimientos de un producto específico
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Movimientos del producto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Movements]
+      summary: Registrar entrada o salida de stock
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovementInput'
+      responses:
+        '201':
+          description: Movimiento registrado y stock actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementResponse'
+        '400':
+          description: Stock insuficiente para la salida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Stock insuficiente para realizar esta salida
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════
+  # SNIPPETS  (registrado en app.js ✅)
+  # ════════════════════════════════════════════
+  /snippets:
+    get:
+      tags: [Snippets]
+      summary: Obtener snippets del usuario autenticado
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de snippets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Snippet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Snippets]
+      summary: Crear nuevo snippet
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnippetInput'
+      responses:
+        '201':
+          description: Snippet creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snippet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /snippets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: ObjectId del snippet
+
+    put:
+      tags: [Snippets]
+      summary: Actualizar snippet
+      description: |
+        > ⚠️ **Convención REST:** Realiza actualización parcial; debería ser `PATCH`.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnippetInput'
+      responses:
+        '200':
+          description: Snippet actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snippet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [Snippets]
+      summary: Eliminar snippet
+      description: |
+        > ⚠️ **Convención REST:** Responde `200` con body; debería ser `204 No Content`.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Snippet eliminado (debería ser 204 No Content)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Snippet removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ─────────────────────────────────────────────
+# TAGS
+# ─────────────────────────────────────────────
+tags:
+  - name: Auth
+    description: Registro e inicio de sesión
+  - name: Products
+    description: "CRUD de productos ⚠️ — Requiere registrar productRoutes en app.js"
+  - name: Movements
+    description: Historial de entradas y salidas de inventario
+  - name: Snippets
+    description: Gestión de snippets de código del usuario
