@@ -1,6 +1,9 @@
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import express from 'express';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
 import connectDB from './config/db.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 import authRoutes from './routes/authRoutes.js';
@@ -13,8 +16,17 @@ connectDB();
 
 const app = express();
 
-app.use(cors());
+const swaggerDocument = YAML.load('./swagger-spec.yml');
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
+
+// Documentación Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
