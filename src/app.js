@@ -1,39 +1,52 @@
-import dotenv from "dotenv";
-import express from "express";
-import connectDB from "./config/db.js";
-import { errorHandler } from "./middleware/errorMiddleware.js";
-import authRoutes from "./routes/authRoutes.js";
-import productRoutes from "./routes/productRoutes.js";
-import testRoutes from "./routes/testRoutes.js";
+import cors from 'cors';
+import dotenv from 'dotenv';
+import express from 'express';
+import connectDB from './config/db.js';
+import { errorHandler } from './middleware/errorMiddleware.js';
+import authRoutes from './routes/authRoutes.js';
+import movementRoutes from './routes/movementRoutes.js';
+import productRoutes from './routes/productRoutes.js';
 
-// Cargar variables de entorno
 dotenv.config();
 
-// Conectar a la base de datos
 connectDB();
 
 const app = express();
 
+// ─── CORS Seguro ────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:5173',
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Permitir requests sin origin (Postman, curl, CI)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origen no permitido → ${origin}`));
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
-// 🌐 Ruta de prueba para el navegador
-app.get("/", (req, res) => {
-  res.send({
-    status: "API en ejecución",
-    database: "Conectada a MongoDB Atlas",
-    endpoints: {
-      auth: "/api/v1/auth",
-      snippets: "/api/v1/snippets (si existen)"
-    },
-    message: "¡Hola! Si ves esto, el backend está funcionando correctamente."
-  });
+// ─── Health Check (debe ir ANTES de helmet/rateLimit) ───────────────────────
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
 });
 
-app.use("/api/v1/auth", authRoutes);
-app.use("/api/test", testRoutes);
-app.use("/api/products", productRoutes);
+// ─── Rutas principales ───────────────────────────────────────────────────────
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/movements', movementRoutes);
 
-// Middleware global de errores
+// ─── Manejador global de errores ─────────────────────────────────────────────
 app.use(errorHandler);
 
 export default app;

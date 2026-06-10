@@ -1,0 +1,28 @@
+name: CD — Deploy Inventra (Render)
+
+on:
+  workflow_run:
+    workflows: ['CI — Inventra Backend']
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Solo despliega si el CI pasó completamente
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      # Dispara Webhook de Render almacenado en GitHub Secrets
+      - name: Deploy a Render vía Webhook
+        run: |
+          curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            --fail
+        # Si el webhook falla, el job falla y queda evidencia en Actions
+
+      - name: Confirmar despliegue
+        run: echo "✅ Deploy disparado exitosamente hacia Render"

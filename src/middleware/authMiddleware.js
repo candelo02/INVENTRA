@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import asyncHandler from './asyncHandler.js';
 
+// Verifica token JWT → 401 si no hay token o es inválido
 const protect = asyncHandler(async (req, res, next) => {
   let token;
 
@@ -13,19 +14,30 @@ const protect = asyncHandler(async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123');
       req.user = await User.findById(decoded.id).select('-password');
-      next();
+
+      if (!req.user) {
+        res.status(401);
+        throw new Error('Usuario no encontrado');
+      }
+
+      return next();
     } catch (error) {
-      console.error(error);
       res.status(401);
-      throw new Error('Not authorized, token failed');
+      throw new Error('No autorizado, token inválido');
     }
   }
 
-  if (!token) {
-    res.status(401);
-    throw new Error('Not authorized, no token');
-  }
+  res.status(401);
+  throw new Error('No autorizado, token no enviado');
 });
 
-export { protect };
+// Verifica rol admin → 403 si el usuario autenticado no tiene permisos
+const authorizeAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    return next();
+  }
+  res.status(403);
+  throw new Error('Acceso denegado: se requiere rol de administrador');
+};
 
+export { authorizeAdmin, protect };
