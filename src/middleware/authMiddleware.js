@@ -21,10 +21,10 @@ const protect = asyncHandler(async (req, res, next) => {
       }
 
       return next();
-    } catch (error) {
-      res.status(401);
-      throw new Error('No autorizado, token inválido');
-    }
+    } catch {
+  res.status(401);
+  throw new Error('No autorizado, token inválido');
+}
   }
 
   res.status(401);
