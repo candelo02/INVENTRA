@@ -33,7 +33,7 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "extensionsToTreatAsEsm": [".js"],
+    
     "transform": {},
     "testMatch": ["**/__tests__/**/*.test.js"],
     "collectCoverageFrom": [
