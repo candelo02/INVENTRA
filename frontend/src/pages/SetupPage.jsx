@@ -5,10 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { useAuth } from '../context/AuthContext'
 
 export default function SetupPage() {
-  const { login }             = useAuth()
   const navigate              = useNavigate()
   const [form, setForm]       = useState({ name: '', email: '', password: '' })
   const [loading, setLoading] = useState(false)
@@ -35,15 +33,13 @@ export default function SetupPage() {
       localStorage.setItem('token', data.data.token)
       localStorage.setItem('user', JSON.stringify(data.data))
       toast.success('¡Sistema configurado! Bienvenido administrador.')
-      navigate('/dashboard')
-      window.location.reload()
+      window.location.href = '/dashboard'
     } catch (err) {
-      const msg = err.response?.data?.message || 'Error al configurar'
       if (err.response?.status === 403) {
         toast.error('El sistema ya tiene un administrador. Inicia sesión.')
         navigate('/login')
       } else {
-        toast.error(msg)
+        toast.error(err.response?.data?.message || 'Error al configurar')
       }
     } finally {
       setLoading(false)
@@ -64,35 +60,9 @@ export default function SetupPage() {
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
-          <Input
-            id="name"
-            label="Nombre completo"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Nombre del administrador"
-            error={errors.name}
-          />
-          <Input
-            id="email"
-            label="Email"
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="admin@empresa.com"
-            error={errors.email}
-          />
-          <Input
-            id="password"
-            label="Contraseña"
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder="Mínimo 6 caracteres"
-            error={errors.password}
-          />
+          <Input id="name"     label="Nombre completo" name="name"     value={form.name}     onChange={handleChange} error={errors.name}     placeholder="Nombre del administrador" />
+          <Input id="email"    label="Email"            name="email"    value={form.email}    onChange={handleChange} error={errors.email}    type="email" placeholder="admin@empresa.com" />
+          <Input id="password" label="Contraseña"       name="password" value={form.password} onChange={handleChange} error={errors.password} type="password" placeholder="Mínimo 6 caracteres" />
           <Button type="submit" loading={loading} className="btn--full">
             Crear administrador
           </Button>
