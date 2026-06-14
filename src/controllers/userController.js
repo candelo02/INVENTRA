@@ -1,5 +1,4 @@
 import User from '../models/User.js';
-import generateToken from '../utils/generateToken.js';
 
 // GET /api/v1/users — solo admin
 export const getUsers = async (req, res) => {
