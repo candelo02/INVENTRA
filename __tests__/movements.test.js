@@ -1,5 +1,6 @@
 /**
  * SUITE: Movimientos de Inventario
+ * Controllers son funciones async puras — no usan asyncHandler directamente
  */
 
 import { jest } from '@jest/globals'
@@ -17,13 +18,14 @@ const { createMovement, getMovements, getMovementById } =
 const { default: Product  } = await import('../src/models/Product.js')
 const { default: Movement } = await import('../src/models/Movement.js')
 
-const run = (controller, req, res) =>
-  new Promise((resolve) => {
-    const next = (err) => { res.__err = err; resolve() }
-    Promise.resolve(controller(req, res, next))
-      .then(() => resolve())
-      .catch((err) => { next(err) })
-  })
+// ── Helper: igual que asyncHandler — captura throw en res.__err ───────────────
+const run = async (fn, req, res) => {
+  try {
+    await fn(req, res, (err) => { res.__err = err })
+  } catch (err) {
+    res.__err = err
+  }
+}
 
 const buildRes = () => {
   const res = { statusCode: 200, __err: null }
@@ -44,12 +46,12 @@ const makeProduct = (qty = 20) => ({
 })
 
 const fakeMovement = {
-  _id: 'mov001',
-  product: { _id: 'prod001', name: 'Camiseta' },
-  user: { toString: () => 'owner123' },
-  type: 'entrada',
+  _id:      'mov001',
+  product:  { _id: 'prod001', name: 'Camiseta' },
+  user:     { toString: () => 'owner123' },
+  type:     'entrada',
   quantity: 5,
-  note: '',
+  note:     '',
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,14 +61,18 @@ describe('MOVEMENTS › createMovement', () => {
   it('201 → entrada aumenta stock', async () => {
     const prod = makeProduct(10)
     Product.findById.mockResolvedValue(prod)
-    Movement.create.mockResolvedValue({ ...fakeMovement })
+    Movement.create.mockResolvedValue(fakeMovement)
 
     const res = buildRes()
-    await run(createMovement, { body: { productId: 'prod001', type: 'entrada', quantity: 5 }, user: ownerUser }, res)
+    await run(createMovement, {
+      body: { productId: 'prod001', type: 'entrada', quantity: 5 },
+      user: ownerUser,
+    }, res)
 
+    expect(res.__err).toBeNull()
     expect(prod.quantity).toBe(15)
     expect(prod.save).toHaveBeenCalled()
-    // El controller llama res.status(201).json(...) — verificamos json con success
+    expect(res.status).toHaveBeenCalledWith(201)
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
   })
 
@@ -76,9 +82,14 @@ describe('MOVEMENTS › createMovement', () => {
     Movement.create.mockResolvedValue({ ...fakeMovement, type: 'salida', quantity: 8 })
 
     const res = buildRes()
-    await run(createMovement, { body: { productId: 'prod001', type: 'salida', quantity: 8 }, user: ownerUser }, res)
+    await run(createMovement, {
+      body: { productId: 'prod001', type: 'salida', quantity: 8 },
+      user: ownerUser,
+    }, res)
 
+    expect(res.__err).toBeNull()
     expect(prod.quantity).toBe(12)
+    expect(res.status).toHaveBeenCalledWith(201)
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
   })
 
@@ -86,7 +97,10 @@ describe('MOVEMENTS › createMovement', () => {
     Product.findById.mockResolvedValue(makeProduct(3))
 
     const res = buildRes()
-    await run(createMovement, { body: { productId: 'prod001', type: 'salida', quantity: 10 }, user: ownerUser }, res)
+    await run(createMovement, {
+      body: { productId: 'prod001', type: 'salida', quantity: 10 },
+      user: ownerUser,
+    }, res)
 
     expect(res.status).toHaveBeenCalledWith(400)
     expect(res.__err).toBeInstanceOf(Error)
@@ -96,7 +110,10 @@ describe('MOVEMENTS › createMovement', () => {
     Product.findById.mockResolvedValue(makeProduct())
 
     const res = buildRes()
-    await run(createMovement, { body: { productId: 'prod001', type: 'entrada', quantity: 5 }, user: otherUser }, res)
+    await run(createMovement, {
+      body: { productId: 'prod001', type: 'entrada', quantity: 5 },
+      user: otherUser,
+    }, res)
 
     expect(res.status).toHaveBeenCalledWith(403)
     expect(res.__err).toBeInstanceOf(Error)
@@ -106,7 +123,10 @@ describe('MOVEMENTS › createMovement', () => {
     Product.findById.mockResolvedValue(null)
 
     const res = buildRes()
-    await run(createMovement, { body: { productId: 'nope', type: 'entrada', quantity: 5 }, user: ownerUser }, res)
+    await run(createMovement, {
+      body: { productId: 'nope', type: 'entrada', quantity: 5 },
+      user: ownerUser,
+    }, res)
 
     expect(res.status).toHaveBeenCalledWith(404)
     expect(res.__err).toBeInstanceOf(Error)
@@ -127,7 +147,10 @@ describe('MOVEMENTS › getMovements', () => {
     const res = buildRes()
     await run(getMovements, { user: ownerUser }, res)
 
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: expect.any(Array) }))
+    expect(res.__err).toBeNull()
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, data: expect.any(Array) })
+    )
   })
 })
 
@@ -143,6 +166,7 @@ describe('MOVEMENTS › getMovementById', () => {
     const res = buildRes()
     await run(getMovementById, { params: { id: 'mov001' }, user: ownerUser }, res)
 
+    expect(res.__err).toBeNull()
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
   })
 

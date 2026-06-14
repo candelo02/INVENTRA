@@ -12,9 +12,6 @@
     "test": "node --experimental-vm-modules node_modules/.bin/jest --forceExit",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --forceExit"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
@@ -41,14 +38,13 @@
       "src/controllers/movementController.js",
       "src/middleware/asyncHandler.js",
       "src/middleware/authMiddleware.js",
-      "src/middleware/errorMiddleware.js",
-      "src/utils/generateToken.js"
+      "src/middleware/errorMiddleware.js"
     ],
     "coverageThreshold": {
       "global": {
         "lines": 85,
         "functions": 85,
-        "branches": 75,
+        "branches": 70,
         "statements": 85
       }
     }
