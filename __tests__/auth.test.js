@@ -1,11 +1,9 @@
 /**
  * SUITE: Autenticación
- * Cubre: registerUser, loginUser, getUserProfile + middleware protect
  */
 
 import { jest } from '@jest/globals'
 
-// ── Mocks ──────────────────────────────────────────────────────────────────────
 jest.unstable_mockModule('../src/models/User.js', () => {
   const mockUser = {
     _id: 'user123',
@@ -25,20 +23,23 @@ jest.unstable_mockModule('../src/utils/generateToken.js', () => ({
   default: jest.fn(() => 'mocked.jwt.token'),
 }))
 
-// ── Imports tras mocks ─────────────────────────────────────────────────────────
-const { registerUser, loginUser, getUserProfile } = await import('../src/controllers/authController.js')
+// Todos los imports dinámicos al nivel raíz del módulo (fuera de describe)
+const { registerUser, loginUser, getUserProfile } =
+  await import('../src/controllers/authController.js')
+
+const { protect } = await import('../src/middleware/authMiddleware.js')
+
 const UserModule = await import('../src/models/User.js')
 const User     = UserModule.default
 const mockUser = UserModule.__mockUser
 
-// ── Helper: ejecuta un controller que usa asyncHandler ─────────────────────────
-// asyncHandler captura el throw y llama next(err). Aquí lo simulamos igual.
+// Helper: replica asyncHandler — captura throw y llama next(err)
 const run = (controller, req, res) =>
   new Promise((resolve) => {
-    const next = (err) => { res.__err = err; resolve({ err }) }
+    const next = (err) => { res.__err = err; resolve() }
     Promise.resolve(controller(req, res, next))
-      .then(() => resolve({}))
-      .catch((err) => { next(err); resolve({ err }) })
+      .then(() => resolve())
+      .catch((err) => { next(err) })
   })
 
 const buildRes = () => {
@@ -56,9 +57,8 @@ describe('AUTH › registerUser', () => {
     User.findOne.mockResolvedValue(null)
     User.create.mockResolvedValue({ ...mockUser })
 
-    const req = { body: { name: 'Jaider Test', email: 'jaider@test.com', password: 'pass123' } }
     const res = buildRes()
-    await run(registerUser, req, res)
+    await run(registerUser, { body: { name: 'Jaider', email: 'j@test.com', password: 'pass123' } }, res)
 
     expect(res.status).toHaveBeenCalledWith(201)
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
@@ -67,16 +67,14 @@ describe('AUTH › registerUser', () => {
   it('400 → email ya registrado', async () => {
     User.findOne.mockResolvedValue(mockUser)
 
-    const req = { body: { name: 'Jaider Test', email: 'jaider@test.com', password: 'pass123' } }
     const res = buildRes()
-    await run(registerUser, req, res)
+    await run(registerUser, { body: { name: 'Jaider', email: 'j@test.com', password: 'pass123' } }, res)
 
     expect(res.status).toHaveBeenCalledWith(400)
     expect(res.__err).toBeInstanceOf(Error)
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
 describe('AUTH › loginUser', () => {
   afterEach(() => jest.clearAllMocks())
 
@@ -84,9 +82,8 @@ describe('AUTH › loginUser', () => {
     mockUser.matchPassword.mockResolvedValue(true)
     User.findOne.mockResolvedValue(mockUser)
 
-    const req = { body: { email: 'jaider@test.com', password: 'pass123' } }
     const res = buildRes()
-    await run(loginUser, req, res)
+    await run(loginUser, { body: { email: 'j@test.com', password: 'pass123' } }, res)
 
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ success: true, data: expect.objectContaining({ token: 'mocked.jwt.token' }) })
@@ -96,9 +93,8 @@ describe('AUTH › loginUser', () => {
   it('401 → usuario no existe', async () => {
     User.findOne.mockResolvedValue(null)
 
-    const req = { body: { email: 'wrong@test.com', password: 'wrongpass' } }
     const res = buildRes()
-    await run(loginUser, req, res)
+    await run(loginUser, { body: { email: 'no@test.com', password: 'x' } }, res)
 
     expect(res.status).toHaveBeenCalledWith(401)
     expect(res.__err).toBeInstanceOf(Error)
@@ -108,60 +104,51 @@ describe('AUTH › loginUser', () => {
     mockUser.matchPassword.mockResolvedValue(false)
     User.findOne.mockResolvedValue(mockUser)
 
-    const req = { body: { email: 'jaider@test.com', password: 'badpass' } }
     const res = buildRes()
-    await run(loginUser, req, res)
+    await run(loginUser, { body: { email: 'j@test.com', password: 'bad' } }, res)
 
     expect(res.status).toHaveBeenCalledWith(401)
     expect(res.__err).toBeInstanceOf(Error)
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
 describe('AUTH › getUserProfile', () => {
   afterEach(() => jest.clearAllMocks())
 
   it('200 → devuelve perfil del usuario autenticado', async () => {
     User.findById.mockResolvedValue(mockUser)
 
-    const req = { user: { _id: 'user123' } }
     const res = buildRes()
-    await run(getUserProfile, req, res)
+    await run(getUserProfile, { user: { _id: 'user123' } }, res)
 
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
   })
 
-  it('404 → usuario no encontrado en DB', async () => {
+  it('404 → usuario no encontrado', async () => {
     User.findById.mockResolvedValue(null)
 
-    const req = { user: { _id: 'nonexistent' } }
     const res = buildRes()
-    await run(getUserProfile, req, res)
+    await run(getUserProfile, { user: { _id: 'nope' } }, res)
 
     expect(res.status).toHaveBeenCalledWith(404)
     expect(res.__err).toBeInstanceOf(Error)
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
 describe('AUTH Middleware › protect', () => {
-  const { protect } = await import('../src/middleware/authMiddleware.js')
-
   afterEach(() => jest.clearAllMocks())
 
   it('401 → sin header Authorization', async () => {
-    const req = { headers: {} }
     const res = buildRes()
-    await run(protect, req, res)
+    await run(protect, { headers: {} }, res)
 
     expect(res.status).toHaveBeenCalledWith(401)
     expect(res.__err).toBeInstanceOf(Error)
   })
 
   it('401 → token malformado', async () => {
-    const req = { headers: { authorization: 'Bearer tokenmalformado' } }
     const res = buildRes()
-    await run(protect, req, res)
+    await run(protect, { headers: { authorization: 'Bearer tokenmalformado' } }, res)
 
     expect(res.status).toHaveBeenCalledWith(401)
     expect(res.__err).toBeInstanceOf(Error)
