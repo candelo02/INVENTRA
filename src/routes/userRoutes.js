@@ -6,12 +6,11 @@ import {
   resetPassword,
 } from '../controllers/userController.js';
 import asyncHandler from '../middleware/asyncHandler.js';
-import { authorizeAdmin, protect } from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.use(protect);
-router.use(authorizeAdmin);
 
 router.route('/')
   .get(asyncHandler(getUsers))

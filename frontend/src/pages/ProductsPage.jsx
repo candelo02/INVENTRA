@@ -1,28 +1,17 @@
 import { Edit2, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import toast from 'react-hot-toast'
-import {
-  createProduct,
-  deleteProduct,
-  getProducts,
-  updateProduct,
-} from '../api/products'
+import { createProduct, deleteProduct, getProducts, updateProduct } from '../api/products'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Spinner } from '../components/ui/Spinner'
-import { useAuth } from '../context/AuthContext'
 import { useApi } from '../hooks/useApi'
 
 const EMPTY = { name: '', description: '', quantity: '', price: '' }
 
 export default function ProductsPage() {
-  const { user } = useAuth()
-  const isAdmin  = user?.role === 'admin'
-
-  const { data: products, loading, setData } = useApi(
-    useCallback(() => getProducts(), [])
-  )
+  const { data: products, loading, setData } = useApi(useCallback(() => getProducts(), []))
 
   const [modal, setModal]     = useState(false)
   const [editing, setEditing] = useState(null)
@@ -42,9 +31,9 @@ export default function ProductsPage() {
 
   const validate = () => {
     const errs = {}
-    if (!form.name)          errs.name     = 'Nombre requerido'
-    if (form.quantity === '') errs.quantity = 'Cantidad requerida'
-    if (form.price === '')    errs.price    = 'Precio requerido'
+    if (!form.name)           errs.name     = 'Nombre requerido'
+    if (form.quantity === '')  errs.quantity = 'Cantidad requerida'
+    if (form.price === '')     errs.price    = 'Precio requerido'
     return errs
   }
 
@@ -94,18 +83,14 @@ export default function ProductsPage() {
   return (
     <div className="page">
       <div className="page__header">
-        <h2 className="page__title">{isAdmin ? 'Productos' : 'Catálogo de productos'}</h2>
-        {isAdmin && (
-          <Button onClick={openCreate}>
-            <Plus size={16} /> Nuevo producto
-          </Button>
-        )}
+        <h2 className="page__title">Productos</h2>
+        <Button onClick={openCreate}><Plus size={16} /> Nuevo producto</Button>
       </div>
 
       {!products?.length ? (
         <div className="empty-state">
-          <p>No hay productos registrados aún.</p>
-          {isAdmin && <Button onClick={openCreate}><Plus size={16} /> Crear producto</Button>}
+          <p>No hay productos aún.</p>
+          <Button onClick={openCreate}><Plus size={16} /> Crear producto</Button>
         </div>
       ) : (
         <div className="table-wrap">
@@ -116,7 +101,7 @@ export default function ProductsPage() {
                 <th>Descripción</th>
                 <th>Stock</th>
                 <th>Precio</th>
-                {isAdmin && <th></th>}
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -124,18 +109,12 @@ export default function ProductsPage() {
                 <tr key={p._id} className={p.quantity <= 5 ? 'row--warning' : ''}>
                   <td><strong>{p.name}</strong></td>
                   <td>{p.description || '—'}</td>
-                  <td>
-                    <span className={`stock ${p.quantity <= 5 ? 'stock--low' : ''}`}>
-                      {p.quantity}
-                    </span>
-                  </td>
+                  <td><span className={`stock ${p.quantity <= 5 ? 'stock--low' : ''}`}>{p.quantity}</span></td>
                   <td>${p.price?.toLocaleString('es-CO')}</td>
-                  {isAdmin && (
-                    <td className="table__actions">
-                      <button className="icon-btn icon-btn--edit"   onClick={() => openEdit(p)}        title="Editar">   <Edit2  size={15} /></button>
-                      <button className="icon-btn icon-btn--delete" onClick={() => handleDelete(p._id)} title="Eliminar"><Trash2 size={15} /></button>
-                    </td>
-                  )}
+                  <td className="table__actions">
+                    <button className="icon-btn icon-btn--edit"   onClick={() => openEdit(p)}        title="Editar"><Edit2  size={15} /></button>
+                    <button className="icon-btn icon-btn--delete" onClick={() => handleDelete(p._id)} title="Eliminar"><Trash2 size={15} /></button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -143,21 +122,18 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Modal solo para admin */}
-      {isAdmin && (
-        <Modal open={modal} title={editing ? 'Editar producto' : 'Nuevo producto'} onClose={() => setModal(false)}>
-          <form onSubmit={handleSubmit} noValidate>
-            <Input id="name"        label="Nombre"       name="name"        value={form.name}        onChange={handleChange} error={errors.name}     placeholder="Ej: Camiseta" />
-            <Input id="description" label="Descripción"  name="description" value={form.description} onChange={handleChange}                          placeholder="Opcional" />
-            <Input id="quantity"    label="Stock"        name="quantity"    value={form.quantity}    onChange={handleChange} error={errors.quantity} type="number" min="0" placeholder="0" />
-            <Input id="price"       label="Precio"       name="price"       value={form.price}       onChange={handleChange} error={errors.price}    type="number" min="0" placeholder="0" />
-            <div className="modal__footer">
-              <Button type="button" variant="ghost" onClick={() => setModal(false)}>Cancelar</Button>
-              <Button type="submit" loading={saving}>{editing ? 'Guardar cambios' : 'Crear'}</Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+      <Modal open={modal} title={editing ? 'Editar producto' : 'Nuevo producto'} onClose={() => setModal(false)}>
+        <form onSubmit={handleSubmit} noValidate>
+          <Input id="name"        label="Nombre"      name="name"        value={form.name}        onChange={handleChange} error={errors.name}     placeholder="Ej: Camiseta" />
+          <Input id="description" label="Descripción" name="description" value={form.description} onChange={handleChange}                          placeholder="Opcional" />
+          <Input id="quantity"    label="Stock"       name="quantity"    value={form.quantity}    onChange={handleChange} error={errors.quantity} type="number" min="0" placeholder="0" />
+          <Input id="price"       label="Precio"      name="price"       value={form.price}       onChange={handleChange} error={errors.price}    type="number" min="0" placeholder="0" />
+          <div className="modal__footer">
+            <Button type="button" variant="ghost" onClick={() => setModal(false)}>Cancelar</Button>
+            <Button type="submit" loading={saving}>{editing ? 'Guardar cambios' : 'Crear'}</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

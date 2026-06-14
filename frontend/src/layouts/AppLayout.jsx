@@ -1,26 +1,18 @@
-import { BarChart2, BoxIcon, LogOut, Menu, ShoppingCart, TrendingUp, Users, X } from 'lucide-react'
+import { BarChart2, BoxIcon, LogOut, Menu, TrendingUp, Users, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
+const NAV = [
+  { to: '/dashboard', icon: BarChart2,  label: 'Dashboard'   },
+  { to: '/products',  icon: BoxIcon,    label: 'Productos'   },
+  { to: '/movements', icon: TrendingUp, label: 'Movimientos' },
+  { to: '/users',     icon: Users,      label: 'Usuarios'    },
+]
+
 export default function AppLayout() {
   const { user, logout } = useAuth()
   const [open, setOpen]  = useState(false)
-  const isAdmin = user?.role === 'admin'
-
-  const NAV_ADMIN = [
-    { to: '/dashboard',  icon: BarChart2,    label: 'Dashboard'    },
-    { to: '/products',   icon: BoxIcon,      label: 'Productos'    },
-    { to: '/movements',  icon: TrendingUp,   label: 'Movimientos'  },
-    { to: '/users',      icon: Users,        label: 'Vendedores'   },
-  ]
-
-  const NAV_VENDEDOR = [
-    { to: '/sales',      icon: ShoppingCart, label: 'Ventas'       },
-    { to: '/products',   icon: BoxIcon,      label: 'Catálogo'     },
-  ]
-
-  const NAV = isAdmin ? NAV_ADMIN : NAV_VENDEDOR
 
   return (
     <div className="layout">
@@ -28,12 +20,6 @@ export default function AppLayout() {
         <div className="sidebar__brand">
           <BoxIcon size={22} />
           <span>Inventra</span>
-        </div>
-
-        <div className="sidebar__role-badge">
-          <span className={`badge ${isAdmin ? 'badge--blue' : 'badge--green'}`}>
-            {isAdmin ? 'Administrador' : 'Vendedor'}
-          </span>
         </div>
 
         <nav className="sidebar__nav">

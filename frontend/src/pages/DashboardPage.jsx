@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart2, BoxIcon, TrendingDown, TrendingUp, Users } from 'lucide-react'
+import { AlertTriangle, BoxIcon, TrendingDown, TrendingUp, Users } from 'lucide-react'
 import { useCallback } from 'react'
 import { getMovements } from '../api/movements'
 import { getProducts } from '../api/products'
@@ -32,7 +32,7 @@ export default function DashboardPage() {
   const lowStock      = products?.filter((p) => p.quantity <= 5) ?? []
   const entradas      = movements?.filter((m) => m.type === 'entrada').length ?? 0
   const salidas       = movements?.filter((m) => m.type === 'salida').length ?? 0
-  const vendedores    = users?.filter((u) => u.role === 'user').length ?? 0
+  const totalUsuarios = users?.length ?? 0
 
   if (loadP || loadM || loadU) return <div className="center-screen"><Spinner size={36} /></div>
 
@@ -44,10 +44,10 @@ export default function DashboardPage() {
 
       <div className="stats-grid">
         <StatCard icon={BoxIcon}      label="Productos"    value={totalProducts} color="blue"   />
-        <StatCard icon={BarChart2}    label="Stock total"  value={totalStock}    color="purple" />
+        <StatCard icon={BoxIcon}      label="Stock total"  value={totalStock}    color="purple" />
         <StatCard icon={TrendingUp}   label="Entradas"     value={entradas}      color="green"  />
-        <StatCard icon={TrendingDown} label="Ventas"       value={salidas}       color="red"    />
-        <StatCard icon={Users}        label="Vendedores"   value={vendedores}    color="blue"   />
+        <StatCard icon={TrendingDown} label="Salidas"      value={salidas}       color="red"    />
+        <StatCard icon={Users}        label="Usuarios"     value={totalUsuarios} color="blue"   />
       </div>
 
       {lowStock.length > 0 && (
@@ -59,7 +59,7 @@ export default function DashboardPage() {
       )}
 
       <section className="section">
-        <h3 className="section__title">Últimas ventas y movimientos</h3>
+        <h3 className="section__title">Últimos movimientos</h3>
         {!movements?.length ? (
           <p className="empty-msg">Sin movimientos registrados aún.</p>
         ) : (
@@ -70,7 +70,6 @@ export default function DashboardPage() {
                   <th>Producto</th>
                   <th>Tipo</th>
                   <th>Cantidad</th>
-                  <th>Vendedor</th>
                   <th>Fecha</th>
                 </tr>
               </thead>
@@ -80,7 +79,6 @@ export default function DashboardPage() {
                     <td>{m.product?.name ?? '—'}</td>
                     <td><Badge type={m.type} /></td>
                     <td>{m.quantity}</td>
-                    <td>{m.user?.name ?? '—'}</td>
                     <td>{new Date(m.createdAt).toLocaleDateString('es-CO')}</td>
                   </tr>
                 ))}

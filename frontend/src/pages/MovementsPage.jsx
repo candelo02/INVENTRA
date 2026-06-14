@@ -13,20 +13,15 @@ import { useApi } from '../hooks/useApi'
 const EMPTY = { productId: '', type: 'entrada', quantity: '', note: '' }
 
 export default function MovementsPage() {
-  const { data: movements, loading: loadM, setData } = useApi(
-    useCallback(() => getMovements(), [])
-  )
-  const { data: products, loading: loadP } = useApi(
-    useCallback(() => getProducts(), [])
-  )
+  const { data: movements, loading: loadM, setData } = useApi(useCallback(() => getMovements(), []))
+  const { data: products,  loading: loadP }          = useApi(useCallback(() => getProducts(), []))
 
-  const [modal, setModal]     = useState(false)
-  const [form, setForm]       = useState(EMPTY)
-  const [saving, setSaving]   = useState(false)
-  const [errors, setErrors]   = useState({})
+  const [modal, setModal]   = useState(false)
+  const [form, setForm]     = useState(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState({})
 
-  const handleChange = (e) =>
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
+  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
   const validate = () => {
     const errs = {}
@@ -53,9 +48,7 @@ export default function MovementsPage() {
       setModal(false)
       setForm(EMPTY)
     } catch (err) {
-      const status = err.response?.status
-      if (status === 403) toast.error('No tienes permiso sobre este producto')
-      else toast.error(err.response?.data?.message || 'Error al registrar')
+      toast.error(err.response?.data?.message || 'Error al registrar')
     } finally {
       setSaving(false)
     }
@@ -127,38 +120,15 @@ export default function MovementsPage() {
             <div className="radio-group">
               {['entrada', 'salida'].map((t) => (
                 <label key={t} className="radio-label">
-                  <input
-                    type="radio"
-                    name="type"
-                    value={t}
-                    checked={form.type === t}
-                    onChange={handleChange}
-                  />
+                  <input type="radio" name="type" value={t} checked={form.type === t} onChange={handleChange} />
                   {t.charAt(0).toUpperCase() + t.slice(1)}
                 </label>
               ))}
             </div>
           </div>
 
-          <Input
-            id="quantity"
-            label="Cantidad"
-            name="quantity"
-            type="number"
-            min="1"
-            value={form.quantity}
-            onChange={handleChange}
-            error={errors.quantity}
-            placeholder="0"
-          />
-          <Input
-            id="note"
-            label="Nota (opcional)"
-            name="note"
-            value={form.note}
-            onChange={handleChange}
-            placeholder="Ej: Compra proveedor X"
-          />
+          <Input id="quantity" label="Cantidad" name="quantity" type="number" min="1" value={form.quantity} onChange={handleChange} error={errors.quantity} placeholder="0" />
+          <Input id="note"     label="Nota (opcional)" name="note" value={form.note} onChange={handleChange} placeholder="Ej: Proveedor X" />
 
           <div className="modal__footer">
             <Button type="button" variant="ghost" onClick={() => setModal(false)}>Cancelar</Button>

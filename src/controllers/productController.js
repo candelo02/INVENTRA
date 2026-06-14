@@ -1,6 +1,5 @@
 import Product from '../models/Product.js';
 
-// Admin: crea producto
 export const createProduct = async (req, res) => {
   const { name, quantity, price, description } = req.body;
   const product = await Product.create({
@@ -13,14 +12,11 @@ export const createProduct = async (req, res) => {
   res.status(201).json({ success: true, data: product });
 };
 
-// Todos: ven todos los productos (admin ve los suyos, vendedor ve todos)
 export const getProducts = async (req, res) => {
-  const filter = req.user.role === 'admin' ? { user: req.user._id } : {};
-  const products = await Product.find(filter).populate('user', 'name');
+  const products = await Product.find({ user: req.user._id });
   res.json({ success: true, data: products });
 };
 
-// Todos: ver producto por id
 export const getProductById = async (req, res) => {
   const product = await Product.findById(req.params.id);
 
@@ -29,16 +25,14 @@ export const getProductById = async (req, res) => {
     throw new Error('Producto no encontrado');
   }
 
-  // Vendedor puede ver cualquier producto; admin solo los suyos
-  if (req.user.role !== 'admin' || product.user.toString() === req.user._id.toString()) {
-    return res.json({ success: true, data: product });
+  if (product.user.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Acceso denegado');
   }
 
-  res.status(403);
-  throw new Error('Acceso denegado');
+  res.json({ success: true, data: product });
 };
 
-// Solo admin: actualizar producto
 export const updateProduct = async (req, res) => {
   const product = await Product.findById(req.params.id);
 
@@ -49,7 +43,7 @@ export const updateProduct = async (req, res) => {
 
   if (product.user.toString() !== req.user._id.toString()) {
     res.status(403);
-    throw new Error('Acceso denegado: no tienes permisos sobre este producto');
+    throw new Error('Acceso denegado');
   }
 
   product.name        = req.body.name        ?? product.name;
@@ -61,7 +55,6 @@ export const updateProduct = async (req, res) => {
   res.json({ success: true, data: updated });
 };
 
-// Solo admin: eliminar producto
 export const deleteProduct = async (req, res) => {
   const product = await Product.findById(req.params.id);
 
@@ -72,7 +65,7 @@ export const deleteProduct = async (req, res) => {
 
   if (product.user.toString() !== req.user._id.toString()) {
     res.status(403);
-    throw new Error('Acceso denegado: no tienes permisos sobre este producto');
+    throw new Error('Acceso denegado');
   }
 
   await product.deleteOne();

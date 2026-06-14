@@ -1,7 +1,5 @@
 /**
- * SUITE: Gestión de Productos
- * getProducts ahora llama .populate() → mock encadenado
- * getProductById: role 'admin' + producto ajeno → 403; role 'user' → 200
+ * SUITE: Gestión de Productos — sin lógica de roles
  */
 import { jest } from '@jest/globals'
 
@@ -28,12 +26,8 @@ const buildRes = () => {
   return res
 }
 
-// Admin es dueño del producto
-const adminUser  = { _id: 'owner123', role: 'admin' }
-// Otro admin que NO es dueño
-const otherAdmin = { _id: 'other456', role: 'admin' }
-// Vendedor (puede ver todos los productos)
-const vendorUser = { _id: 'vendor789', role: 'user' }
+const ownerUser = { _id: 'owner123' }
+const otherUser = { _id: 'other456' }
 
 const fakeProduct = {
   _id:      'prod001',
@@ -45,74 +39,48 @@ const fakeProduct = {
   deleteOne: jest.fn(),
 }
 
-// ── createProduct ─────────────────────────────────────────────────────────────
 describe('PRODUCTS › createProduct', () => {
   afterEach(() => jest.clearAllMocks())
 
   it('201 → crea producto correctamente', async () => {
     Product.create.mockResolvedValue(fakeProduct)
     const res = buildRes()
-    await run(createProduct, { body: { name: 'Camiseta', quantity: 10, price: 25000 }, user: adminUser }, res)
+    await run(createProduct, { body: { name: 'Camiseta', quantity: 10, price: 25000 }, user: ownerUser }, res)
 
     expect(res.status).toHaveBeenCalledWith(201)
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
   })
 })
 
-// ── getProducts ───────────────────────────────────────────────────────────────
 describe('PRODUCTS › getProducts', () => {
   afterEach(() => jest.clearAllMocks())
 
-  it('200 → admin ve sus productos (con populate)', async () => {
-    // find().populate() → array
-    Product.find.mockReturnValue({
-      populate: jest.fn().mockResolvedValue([fakeProduct]),
-    })
+  it('200 → devuelve lista de productos', async () => {
+    Product.find.mockResolvedValue([fakeProduct])
     const res = buildRes()
-    await run(getProducts, { user: adminUser }, res)
-
-    expect(res.__err).toBeNull()
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: expect.any(Array) }))
-  })
-
-  it('200 → vendedor ve todos los productos (con populate)', async () => {
-    Product.find.mockReturnValue({
-      populate: jest.fn().mockResolvedValue([fakeProduct]),
-    })
-    const res = buildRes()
-    await run(getProducts, { user: vendorUser }, res)
+    await run(getProducts, { user: ownerUser }, res)
 
     expect(res.__err).toBeNull()
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: expect.any(Array) }))
   })
 })
 
-// ── getProductById ────────────────────────────────────────────────────────────
 describe('PRODUCTS › getProductById', () => {
   afterEach(() => jest.clearAllMocks())
 
-  it('200 → admin dueño ve su producto', async () => {
+  it('200 → devuelve producto al dueño', async () => {
     Product.findById.mockResolvedValue(fakeProduct)
     const res = buildRes()
-    await run(getProductById, { params: { id: 'prod001' }, user: adminUser }, res)
+    await run(getProductById, { params: { id: 'prod001' }, user: ownerUser }, res)
 
     expect(res.__err).toBeNull()
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
   })
 
-  it('200 → vendedor puede ver cualquier producto', async () => {
+  it('403 → usuario diferente intenta acceder', async () => {
     Product.findById.mockResolvedValue(fakeProduct)
     const res = buildRes()
-    await run(getProductById, { params: { id: 'prod001' }, user: vendorUser }, res)
-
-    expect(res.__err).toBeNull()
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
-  })
-
-  it('403 → admin diferente intenta ver producto ajeno', async () => {
-    Product.findById.mockResolvedValue(fakeProduct)
-    const res = buildRes()
-    await run(getProductById, { params: { id: 'prod001' }, user: otherAdmin }, res)
+    await run(getProductById, { params: { id: 'prod001' }, user: otherUser }, res)
 
     expect(res.status).toHaveBeenCalledWith(403)
     expect(res.__err).toBeInstanceOf(Error)
@@ -121,14 +89,13 @@ describe('PRODUCTS › getProductById', () => {
   it('404 → producto no existe', async () => {
     Product.findById.mockResolvedValue(null)
     const res = buildRes()
-    await run(getProductById, { params: { id: 'nonexistent' }, user: adminUser }, res)
+    await run(getProductById, { params: { id: 'nope' }, user: ownerUser }, res)
 
     expect(res.status).toHaveBeenCalledWith(404)
     expect(res.__err).toBeInstanceOf(Error)
   })
 })
 
-// ── updateProduct ─────────────────────────────────────────────────────────────
 describe('PRODUCTS › updateProduct', () => {
   afterEach(() => jest.clearAllMocks())
 
@@ -136,16 +103,16 @@ describe('PRODUCTS › updateProduct', () => {
     const saveable = { ...fakeProduct, save: jest.fn().mockResolvedValue(fakeProduct) }
     Product.findById.mockResolvedValue(saveable)
     const res = buildRes()
-    await run(updateProduct, { params: { id: 'prod001' }, body: { name: 'Nuevo' }, user: adminUser }, res)
+    await run(updateProduct, { params: { id: 'prod001' }, body: { name: 'Nuevo' }, user: ownerUser }, res)
 
     expect(saveable.save).toHaveBeenCalled()
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
   })
 
-  it('403 → admin diferente intenta actualizar', async () => {
+  it('403 → usuario diferente intenta actualizar', async () => {
     Product.findById.mockResolvedValue(fakeProduct)
     const res = buildRes()
-    await run(updateProduct, { params: { id: 'prod001' }, body: { name: 'Hack' }, user: otherAdmin }, res)
+    await run(updateProduct, { params: { id: 'prod001' }, body: {}, user: otherUser }, res)
 
     expect(res.status).toHaveBeenCalledWith(403)
     expect(res.__err).toBeInstanceOf(Error)
@@ -154,14 +121,13 @@ describe('PRODUCTS › updateProduct', () => {
   it('404 → producto no encontrado', async () => {
     Product.findById.mockResolvedValue(null)
     const res = buildRes()
-    await run(updateProduct, { params: { id: 'nope' }, body: {}, user: adminUser }, res)
+    await run(updateProduct, { params: { id: 'nope' }, body: {}, user: ownerUser }, res)
 
     expect(res.status).toHaveBeenCalledWith(404)
     expect(res.__err).toBeInstanceOf(Error)
   })
 })
 
-// ── deleteProduct ─────────────────────────────────────────────────────────────
 describe('PRODUCTS › deleteProduct', () => {
   afterEach(() => jest.clearAllMocks())
 
@@ -169,16 +135,16 @@ describe('PRODUCTS › deleteProduct', () => {
     const deleteable = { ...fakeProduct, deleteOne: jest.fn().mockResolvedValue(true) }
     Product.findById.mockResolvedValue(deleteable)
     const res = buildRes()
-    await run(deleteProduct, { params: { id: 'prod001' }, user: adminUser }, res)
+    await run(deleteProduct, { params: { id: 'prod001' }, user: ownerUser }, res)
 
     expect(deleteable.deleteOne).toHaveBeenCalled()
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
   })
 
-  it('403 → admin diferente intenta eliminar', async () => {
+  it('403 → usuario diferente intenta eliminar', async () => {
     Product.findById.mockResolvedValue(fakeProduct)
     const res = buildRes()
-    await run(deleteProduct, { params: { id: 'prod001' }, user: otherAdmin }, res)
+    await run(deleteProduct, { params: { id: 'prod001' }, user: otherUser }, res)
 
     expect(res.status).toHaveBeenCalledWith(403)
     expect(res.__err).toBeInstanceOf(Error)
@@ -187,7 +153,7 @@ describe('PRODUCTS › deleteProduct', () => {
   it('404 → producto no encontrado', async () => {
     Product.findById.mockResolvedValue(null)
     const res = buildRes()
-    await run(deleteProduct, { params: { id: 'nonexistent' }, user: adminUser }, res)
+    await run(deleteProduct, { params: { id: 'nope' }, user: ownerUser }, res)
 
     expect(res.status).toHaveBeenCalledWith(404)
     expect(res.__err).toBeInstanceOf(Error)

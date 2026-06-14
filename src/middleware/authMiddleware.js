@@ -3,7 +3,6 @@ import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
 import asyncHandler from './asyncHandler.js';
 
-// Verifica token — 401 si no hay token o es inválido
 export const protectHandler = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -24,7 +23,7 @@ export const protectHandler = async (req, res, next) => {
 
     req.user = user;
 
-    // ── Sliding session: renovar token en cada request (reinicia el 1h) ───────
+    // Sliding session: renovar token en cada request
     const newToken = generateToken(user._id);
     res.setHeader('X-Refresh-Token', newToken);
 
@@ -36,12 +35,3 @@ export const protectHandler = async (req, res, next) => {
 };
 
 export const protect = asyncHandler(protectHandler);
-
-// 403 → autenticado pero sin rol de administrador
-export const authorizeAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    return next();
-  }
-  res.status(403);
-  throw new Error('Acceso denegado: se requiere rol de administrador');
-};
