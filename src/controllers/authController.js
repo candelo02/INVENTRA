@@ -1,9 +1,8 @@
-import asyncHandler from '../middleware/asyncHandler.js';
 import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
 
-// POST /api/v1/auth/register
-export const registerUser = asyncHandler(async (req, res) => {
+// Lógica pura — sin asyncHandler para facilitar tests unitarios
+export const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
 
   const userExists = await User.findOne({ email });
@@ -18,17 +17,16 @@ export const registerUser = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     data: {
-      _id: user._id,
-      name: user.name,
+      _id:   user._id,
+      name:  user.name,
       email: user.email,
-      role: user.role,
+      role:  user.role,
       token: generateToken(user._id),
     },
   });
-});
+};
 
-// POST /api/v1/auth/login
-export const loginUser = asyncHandler(async (req, res) => {
+export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
@@ -48,17 +46,16 @@ export const loginUser = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      _id: user._id,
-      name: user.name,
+      _id:   user._id,
+      name:  user.name,
       email: user.email,
-      role: user.role,
+      role:  user.role,
       token: generateToken(user._id),
     },
   });
-});
+};
 
-// GET /api/v1/auth/profile
-export const getUserProfile = asyncHandler(async (req, res) => {
+export const getUserProfile = async (req, res) => {
   const user = await User.findById(req.user._id);
 
   if (!user) {
@@ -69,11 +66,11 @@ export const getUserProfile = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      _id:       user._id,
+      name:      user.name,
+      email:     user.email,
+      role:      user.role,
       createdAt: user.createdAt,
     },
   });
-});
+};

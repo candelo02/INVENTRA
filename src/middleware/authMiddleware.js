@@ -2,8 +2,8 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import asyncHandler from './asyncHandler.js';
 
-// 401 → sin token / token inválido o expirado
-const protect = asyncHandler(async (req, res, next) => {
+// Función pura — asyncHandler la envuelve en las rutas
+export const protectHandler = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -27,15 +27,16 @@ const protect = asyncHandler(async (req, res, next) => {
     res.status(401);
     throw new Error('No autorizado, token inválido');
   }
-});
+};
+
+// Wrapper listo para usar en rutas Express
+export const protect = asyncHandler(protectHandler);
 
 // 403 → autenticado pero sin rol de administrador
-const authorizeAdmin = (req, res, next) => {
+export const authorizeAdmin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     return next();
   }
   res.status(403);
   throw new Error('Acceso denegado: se requiere rol de administrador');
 };
-
-export { authorizeAdmin, protect };
