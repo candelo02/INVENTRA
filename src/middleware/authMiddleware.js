@@ -23,15 +23,15 @@ const protect = asyncHandler(async (req, res, next) => {
 
     req.user = user;
     return next();
-  } catch (_err) {
+  } catch {
     res.status(401);
     throw new Error('No autorizado, token inválido');
   }
 });
 
 // 403 → autenticado pero sin rol de administrador
-const authorizeAdmin = (_req, res, next) => {
-  if (_req.user && _req.user.role === 'admin') {
+const authorizeAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
     return next();
   }
   res.status(403);
