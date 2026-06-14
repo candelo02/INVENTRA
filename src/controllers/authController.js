@@ -1,35 +1,7 @@
 import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
 
-// Registro público — solo crea rol 'admin' si no hay usuarios en el sistema
-export const registerUser = async (req, res) => {
-  const { name, email, password } = req.body;
-
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    res.status(400);
-    throw new Error('El usuario ya existe');
-  }
-
-  // El primer usuario registrado es admin automáticamente
-  const totalUsers = await User.countDocuments();
-  const role = totalUsers === 0 ? 'admin' : 'user';
-
-  const user = await User.create({ name, email, password, role });
-
-  res.status(201).json({
-    success: true,
-    data: {
-      _id:   user._id,
-      name:  user.name,
-      email: user.email,
-      role:  user.role,
-      token: generateToken(user._id),
-    },
-  });
-};
-
-// Login
+// POST /api/v1/auth/login
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -57,7 +29,7 @@ export const loginUser = async (req, res) => {
   });
 };
 
-// Perfil propio
+// GET /api/v1/auth/profile
 export const getUserProfile = async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) {
@@ -73,6 +45,30 @@ export const getUserProfile = async (req, res) => {
       email:     user.email,
       role:      user.role,
       createdAt: user.createdAt,
+    },
+  });
+};
+
+// POST /api/v1/auth/setup — crea el primer admin (solo si no existe ninguno)
+export const setupAdmin = async (req, res) => {
+  const { name, email, password } = req.body;
+
+  const adminExists = await User.findOne({ role: 'admin' });
+  if (adminExists) {
+    res.status(403);
+    throw new Error('El sistema ya tiene un administrador configurado');
+  }
+
+  const user = await User.create({ name, email, password, role: 'admin' });
+
+  res.status(201).json({
+    success: true,
+    data: {
+      _id:   user._id,
+      name:  user.name,
+      email: user.email,
+      role:  user.role,
+      token: generateToken(user._id),
     },
   });
 };

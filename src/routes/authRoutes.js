@@ -3,7 +3,7 @@ import { validationResult } from 'express-validator';
 import {
   getUserProfile,
   loginUser,
-  registerUser,
+  setupAdmin,
 } from '../controllers/authController.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -19,8 +19,8 @@ const validate = (req, res, next) => {
   return next();
 };
 
-router.post('/register', registerValidation, validate, asyncHandler(registerUser));
-router.post('/login',    loginValidation,    validate, asyncHandler(loginUser));
-router.get('/profile',   protect,                      asyncHandler(getUserProfile));
+router.post('/setup',  registerValidation, validate, asyncHandler(setupAdmin));
+router.post('/login',  loginValidation,    validate, asyncHandler(loginUser));
+router.get('/profile', protect,                      asyncHandler(getUserProfile));
 
 export default router;

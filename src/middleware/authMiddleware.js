@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import generateToken from '../utils/generateToken.js';
 import asyncHandler from './asyncHandler.js';
 
-// Función pura — asyncHandler la envuelve en las rutas
+// Verifica token — 401 si no hay token o es inválido
 export const protectHandler = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -22,14 +23,18 @@ export const protectHandler = async (req, res, next) => {
     }
 
     req.user = user;
+
+    // ── Sliding session: renovar token en cada request (reinicia el 1h) ───────
+    const newToken = generateToken(user._id);
+    res.setHeader('X-Refresh-Token', newToken);
+
     return next();
   } catch {
     res.status(401);
-    throw new Error('No autorizado, token inválido');
+    throw new Error('No autorizado, token inválido o expirado');
   }
 };
 
-// Wrapper listo para usar en rutas Express
 export const protect = asyncHandler(protectHandler);
 
 // 403 → autenticado pero sin rol de administrador

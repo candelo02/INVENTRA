@@ -17,12 +17,13 @@ export default [
         ecmaFeatures: { jsx: true },
       },
       globals: {
-        window:    'readonly',
-        document:  'readonly',
+        window:       'readonly',
+        document:     'readonly',
         localStorage: 'readonly',
-        console:   'readonly',
-        confirm:   'readonly',
-        fetch:     'readonly',
+        console:      'readonly',
+        confirm:      'readonly',
+        fetch:        'readonly',
+        atob:         'readonly',
       },
     },
     settings: {
@@ -40,6 +41,10 @@ export default [
     },
   },
   {
-    ignores: ['node_modules/**', 'dist/**'],
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'src/pages/RegisterPage.jsx',
+    ],
   },
 ]

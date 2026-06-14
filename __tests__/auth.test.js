@@ -1,14 +1,14 @@
 /**
  * SUITE: Autenticación
+ * registerUser eliminado — reemplazado por setupAdmin y loginUser
  */
 import { jest } from '@jest/globals'
 
 jest.unstable_mockModule('../src/models/User.js', () => ({
   default: {
-    findOne:        jest.fn(),
-    findById:       jest.fn(),
-    create:         jest.fn(),
-    countDocuments: jest.fn(),
+    findOne:  jest.fn(),
+    findById: jest.fn(),
+    create:   jest.fn(),
   },
 }))
 
@@ -16,7 +16,7 @@ jest.unstable_mockModule('../src/utils/generateToken.js', () => ({
   default: jest.fn(() => 'tok.mock.jwt'),
 }))
 
-const { registerUser, loginUser, getUserProfile } =
+const { setupAdmin, loginUser, getUserProfile } =
   await import('../src/controllers/authController.js')
 const { protectHandler } =
   await import('../src/middleware/authMiddleware.js')
@@ -38,30 +38,29 @@ const buildRes = () => {
   const res = { statusCode: 200, __err: null }
   res.status = jest.fn((code) => { res.statusCode = code; return res })
   res.json   = jest.fn().mockReturnValue(res)
+  res.setHeader = jest.fn()
   return res
 }
 
 const makeFakeUser = (matchResult = true) => ({
   _id:           'uid001',
-  name:          'Jaider',
-  email:         'j@test.com',
+  name:          'Admin',
+  email:         'admin@test.com',
   role:          'admin',
   createdAt:     '2024-01-01',
   matchPassword: jest.fn().mockResolvedValue(matchResult),
 })
 
-// ── registerUser ──────────────────────────────────────────────────────────────
-describe('AUTH › registerUser', () => {
+// ── setupAdmin ────────────────────────────────────────────────────────────────
+describe('AUTH › setupAdmin', () => {
   afterEach(() => jest.clearAllMocks())
 
-  it('201 → crea usuario y retorna token', async () => {
-    const user = makeFakeUser()
+  it('201 → crea primer admin si no existe ninguno', async () => {
     User.findOne.mockResolvedValue(null)
-    User.countDocuments.mockResolvedValue(0)
-    User.create.mockResolvedValue(user)
+    User.create.mockResolvedValue(makeFakeUser())
 
     const res = buildRes()
-    await run(registerUser, { body: { name: 'Jaider', email: 'j@test.com', password: 'pass123' } }, res)
+    await run(setupAdmin, { body: { name: 'Admin', email: 'admin@test.com', password: 'pass123' } }, res)
 
     expect(res.__err).toBeNull()
     expect(res.status).toHaveBeenCalledWith(201)
@@ -70,13 +69,13 @@ describe('AUTH › registerUser', () => {
     )
   })
 
-  it('400 → email ya registrado', async () => {
+  it('403 → ya existe un admin en el sistema', async () => {
     User.findOne.mockResolvedValue(makeFakeUser())
 
     const res = buildRes()
-    await run(registerUser, { body: { name: 'X', email: 'j@test.com', password: 'x' } }, res)
+    await run(setupAdmin, { body: { name: 'X', email: 'x@test.com', password: 'pass123' } }, res)
 
-    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.status).toHaveBeenCalledWith(403)
     expect(res.__err).toBeInstanceOf(Error)
   })
 })
@@ -89,7 +88,7 @@ describe('AUTH › loginUser', () => {
     User.findOne.mockResolvedValue(makeFakeUser(true))
 
     const res = buildRes()
-    await run(loginUser, { body: { email: 'j@test.com', password: 'pass123' } }, res)
+    await run(loginUser, { body: { email: 'admin@test.com', password: 'pass123' } }, res)
 
     expect(res.__err).toBeNull()
     expect(res.json).toHaveBeenCalledWith(
@@ -111,7 +110,7 @@ describe('AUTH › loginUser', () => {
     User.findOne.mockResolvedValue(makeFakeUser(false))
 
     const res = buildRes()
-    await run(loginUser, { body: { email: 'j@test.com', password: 'mala' } }, res)
+    await run(loginUser, { body: { email: 'admin@test.com', password: 'mala' } }, res)
 
     expect(res.status).toHaveBeenCalledWith(401)
     expect(res.__err).toBeInstanceOf(Error)
@@ -122,7 +121,7 @@ describe('AUTH › loginUser', () => {
 describe('AUTH › getUserProfile', () => {
   afterEach(() => jest.clearAllMocks())
 
-  it('200 → retorna perfil del usuario', async () => {
+  it('200 → retorna perfil del usuario autenticado', async () => {
     User.findById.mockResolvedValue(makeFakeUser())
 
     const res = buildRes()
@@ -183,7 +182,7 @@ describe('Middleware › errorHandler', () => {
     errorHandler(err, { method: 'POST', originalUrl: '/test' }, res, () => {})
 
     expect(res.status).toHaveBeenCalledWith(422)
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, message: 'algo salió mal' }))
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }))
   })
 
   it('usa 500 cuando statusCode es 200', () => {

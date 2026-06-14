@@ -5,27 +5,49 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// ── Request: inyectar token JWT automáticamente ──────────────────────────────
+// Decodifica expiración del JWT localmente
+export const isTokenExpired = (token) => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return Date.now() >= payload.exp * 1000
+  } catch {
+    return true
+  }
+}
+
+// ── Request: adjuntar token, rechazar si expiró ───────────────────────────────
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
+
   if (token) {
+    if (isTokenExpired(token)) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.location.href = '/login'
+      return Promise.reject(new Error('Sesión expirada'))
+    }
     config.headers.Authorization = `Bearer ${token}`
   }
+
   return config
 })
 
-// ── Response: manejar 401 → logout, 403 → mensaje ───────────────────────────
+// ── Response: renovar token si el backend envía X-Refresh-Token ──────────────
+// Esto implementa la sliding session: cada request exitoso reinicia el 1h
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const refreshed = response.headers['x-refresh-token']
+    if (refreshed) {
+      localStorage.setItem('token', refreshed)
+    }
+    return response
+  },
   (error) => {
-    const status = error.response?.status
-
-    if (status === 401) {
+    if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
     }
-
     return Promise.reject(error)
   }
 )
