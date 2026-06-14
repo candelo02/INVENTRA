@@ -13,7 +13,7 @@ connectDB();
 
 const app = express();
 
-// ─── CORS Seguro ────────────────────────────────────────────────────────────
+// ─── CORS Seguro ─────────────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:3000',
@@ -23,7 +23,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Permitir requests sin origin (Postman, curl, CI)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -36,17 +35,17 @@ app.use(
 
 app.use(express.json());
 
-// ─── Health Check (debe ir ANTES de helmet/rateLimit) ───────────────────────
+// ─── Health Check — debe ir ANTES de cualquier middleware de seguridad ────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
-// ─── Rutas principales ───────────────────────────────────────────────────────
+// ─── Rutas ───────────────────────────────────────────────────────────────────
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/movements', movementRoutes);
 
-// ─── Manejador global de errores ─────────────────────────────────────────────
+// ─── Error handler global ─────────────────────────────────────────────────────
 app.use(errorHandler);
 
 export default app;

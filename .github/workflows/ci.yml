@@ -1,4 +1,4 @@
-name: CI — Inventra Backend
+name: CI — Inventra Full-Stack
 
 on:
   push:
@@ -7,42 +7,68 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  # ── Backend ──────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend — Lint + Tests
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout del código fuente
       - name: Checkout código
         uses: actions/checkout@v4
 
-      # 2. Configurar Node.js 24
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
 
-      # 3. Instalación limpia de dependencias de desarrollo
-      - name: Instalar dependencias
+      - name: Instalar dependencias (ci limpio)
         run: npm ci
 
-      # 4. Validación estática ESLint (si falla, el pipeline se detiene)
-      - name: ESLint — validación de código
+      - name: ESLint — validación estática
         run: npm run lint
 
-      # 5. Tests unitarios e integración con cobertura
       - name: Jest — pruebas con cobertura
         run: npm run test:coverage
         env:
           NODE_ENV: test
-          JWT_SECRET: test_secret_ci
+          JWT_SECRET: ci_secret_jwt_inventra
           MONGO_URI: mongodb://localhost:27017/inventra_test
 
-      # 6. Publicar reporte de cobertura (artefacto descargable)
       - name: Subir reporte de cobertura
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-report
+          name: backend-coverage
           path: coverage/
           retention-days: 7
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend — Lint + Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias frontend (ci limpio)
+        working-directory: frontend
+        run: npm ci
+
+      - name: ESLint — validación frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Vite — build de producción
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_URL: https://inventra-backend.onrender.com/api/v1

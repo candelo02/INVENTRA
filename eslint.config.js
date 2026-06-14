@@ -22,6 +22,18 @@ export default [
     },
   },
   {
-    ignores: ['node_modules/**', '__tests__/**', 'coverage/**'],
+    // Excluir archivos stub y legacy
+    ignores: [
+      'node_modules/**',
+      '__tests__/**',
+      'coverage/**',
+      'frontend/**',
+      'src/controllers/snippetController.js',
+      'src/controllers/testController.js',
+      'src/routes/snippetRoutes.js',
+      'src/routes/testRoutes.js',
+      'src/models/Snippet.js',
+      'src/validators/snippetValidator.js',
+    ],
   },
 ];

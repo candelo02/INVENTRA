@@ -2,38 +2,36 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import asyncHandler from './asyncHandler.js';
 
-// Verifica token JWT → 401 si no hay token o es inválido
+// 401 → sin token / token inválido o expirado
 const protect = asyncHandler(async (req, res, next) => {
-  let token;
+  const authHeader = req.headers.authorization;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    try {
-      token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123');
-      req.user = await User.findById(decoded.id).select('-password');
-
-      if (!req.user) {
-        res.status(401);
-        throw new Error('Usuario no encontrado');
-      }
-
-      return next();
-    } catch {
-  res.status(401);
-  throw new Error('No autorizado, token inválido');
-}
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401);
+    throw new Error('No autorizado, token no enviado');
   }
 
-  res.status(401);
-  throw new Error('No autorizado, token no enviado');
+  try {
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123');
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      res.status(401);
+      throw new Error('No autorizado, usuario no encontrado');
+    }
+
+    req.user = user;
+    return next();
+  } catch (_err) {
+    res.status(401);
+    throw new Error('No autorizado, token inválido');
+  }
 });
 
-// Verifica rol admin → 403 si el usuario autenticado no tiene permisos
-const authorizeAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+// 403 → autenticado pero sin rol de administrador
+const authorizeAdmin = (_req, res, next) => {
+  if (_req.user && _req.user.role === 'admin') {
     return next();
   }
   res.status(403);

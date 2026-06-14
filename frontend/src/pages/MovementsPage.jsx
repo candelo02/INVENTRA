@@ -13,7 +13,7 @@ import { useApi } from '../hooks/useApi'
 const EMPTY = { productId: '', type: 'entrada', quantity: '', note: '' }
 
 export default function MovementsPage() {
-  const { data: movements, loading: loadM, execute: reloadM, setData } = useApi(
+  const { data: movements, loading: loadM, setData } = useApi(
     useCallback(() => getMovements(), [])
   )
   const { data: products, loading: loadP } = useApi(
@@ -103,7 +103,6 @@ export default function MovementsPage() {
 
       <Modal open={modal} title="Registrar movimiento" onClose={() => setModal(false)}>
         <form onSubmit={handleSubmit} noValidate>
-          {/* Selector de producto */}
           <div className="field">
             <label className="field__label" htmlFor="productId">Producto</label>
             <select
@@ -123,7 +122,6 @@ export default function MovementsPage() {
             {errors.productId && <span className="field__error">{errors.productId}</span>}
           </div>
 
-          {/* Tipo */}
           <div className="field">
             <label className="field__label">Tipo</label>
             <div className="radio-group">

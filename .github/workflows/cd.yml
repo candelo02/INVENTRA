@@ -2,27 +2,36 @@ name: CD — Deploy Inventra (Render)
 
 on:
   workflow_run:
-    workflows: ['CI — Inventra Backend']
+    workflows: ['CI — Inventra Full-Stack']
     types: [completed]
     branches: [main]
 
 jobs:
-  deploy:
+  deploy-backend:
+    name: Deploy Backend → Render
     runs-on: ubuntu-latest
-    # Solo despliega si el CI pasó completamente
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      # Dispara Webhook de Render almacenado en GitHub Secrets
-      - name: Deploy a Render vía Webhook
+      - name: Deploy Backend a Render
         run: |
-          curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+          curl -s -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}" \
             -H "Content-Type: application/json" \
             --fail
-        # Si el webhook falla, el job falla y queda evidencia en Actions
+      - name: Confirmar deploy backend
+        run: echo "✅ Backend desplegado en Render"
 
-      - name: Confirmar despliegue
-        run: echo "✅ Deploy disparado exitosamente hacia Render"
+  deploy-frontend:
+    name: Deploy Frontend → Render
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Deploy Frontend a Render
+        run: |
+          curl -s -X POST "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}" \
+            -H "Content-Type: application/json" \
+            --fail
+      - name: Confirmar deploy frontend
+        run: echo "✅ Frontend desplegado en Render"

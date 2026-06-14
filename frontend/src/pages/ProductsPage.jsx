@@ -16,18 +16,18 @@ import { useApi } from '../hooks/useApi'
 const EMPTY = { name: '', quantity: '', price: '' }
 
 export default function ProductsPage() {
-  const { data: products, loading, execute: reload, setData } = useApi(
+  const { data: products, loading, setData } = useApi(
     useCallback(() => getProducts(), [])
   )
 
   const [modal, setModal]     = useState(false)
-  const [editing, setEditing] = useState(null)   // null = crear, obj = editar
+  const [editing, setEditing] = useState(null)
   const [form, setForm]       = useState(EMPTY)
   const [saving, setSaving]   = useState(false)
   const [errors, setErrors]   = useState({})
 
   const openCreate = () => { setEditing(null); setForm(EMPTY); setErrors({}); setModal(true) }
-  const openEdit   = (p)  => {
+  const openEdit   = (p) => {
     setEditing(p)
     setForm({ name: p.name, quantity: p.quantity, price: p.price })
     setErrors({})
@@ -39,9 +39,9 @@ export default function ProductsPage() {
 
   const validate = () => {
     const errs = {}
-    if (!form.name)               errs.name     = 'Nombre requerido'
-    if (form.quantity === '')     errs.quantity = 'Cantidad requerida'
-    if (form.price === '')        errs.price    = 'Precio requerido'
+    if (!form.name)           errs.name     = 'Nombre requerido'
+    if (form.quantity === '')  errs.quantity = 'Cantidad requerida'
+    if (form.price === '')     errs.price    = 'Precio requerido'
     return errs
   }
 
@@ -127,7 +127,7 @@ export default function ProductsPage() {
                   <td>${p.price.toLocaleString('es-CO')}</td>
                   <td>{new Date(p.createdAt).toLocaleDateString('es-CO')}</td>
                   <td className="table__actions">
-                    <button className="icon-btn icon-btn--edit"  onClick={() => openEdit(p)}       title="Editar">   <Edit2  size={15} /></button>
+                    <button className="icon-btn icon-btn--edit"   onClick={() => openEdit(p)}        title="Editar">   <Edit2  size={15} /></button>
                     <button className="icon-btn icon-btn--delete" onClick={() => handleDelete(p._id)} title="Eliminar"><Trash2 size={15} /></button>
                   </td>
                 </tr>
@@ -137,12 +137,11 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Modal crear / editar */}
       <Modal open={modal} title={editing ? 'Editar producto' : 'Nuevo producto'} onClose={() => setModal(false)}>
         <form onSubmit={handleSubmit} noValidate>
-          <Input id="name"     label="Nombre"   name="name"     value={form.name}     onChange={handleChange} error={errors.name}     placeholder="Ej: Camiseta" />
-          <Input id="quantity" label="Stock"    name="quantity" value={form.quantity} onChange={handleChange} error={errors.quantity} type="number" min="0" placeholder="0" />
-          <Input id="price"    label="Precio"   name="price"    value={form.price}    onChange={handleChange} error={errors.price}    type="number" min="0" placeholder="0" />
+          <Input id="name"     label="Nombre" name="name"     value={form.name}     onChange={handleChange} error={errors.name}     placeholder="Ej: Camiseta" />
+          <Input id="quantity" label="Stock"  name="quantity" value={form.quantity} onChange={handleChange} error={errors.quantity} type="number" min="0" placeholder="0" />
+          <Input id="price"    label="Precio" name="price"    value={form.price}    onChange={handleChange} error={errors.price}    type="number" min="0" placeholder="0" />
           <div className="modal__footer">
             <Button type="button" variant="ghost" onClick={() => setModal(false)}>Cancelar</Button>
             <Button type="submit" loading={saving}>{editing ? 'Guardar cambios' : 'Crear'}</Button>

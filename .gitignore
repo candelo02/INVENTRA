@@ -1,8 +1,13 @@
+# Variables de entorno — NUNCA subir al repo
+.env
+frontend/.env
+
 # Dependencias
 node_modules/
+frontend/node_modules/
 
-# Variables de entorno sensibles
-.env
+# Build
+frontend/dist/
 
 # Coverage
 coverage/
