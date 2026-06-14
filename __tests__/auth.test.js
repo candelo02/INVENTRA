@@ -1,12 +1,11 @@
 /**
  * SUITE: Autenticación
- * Cubre: registerUser, loginUser, getUserProfile
- * Módulos críticos: flujos exitosos y fallidos (401 / 400 / 404)
+ * Cubre: registerUser, loginUser, getUserProfile + middleware protect
  */
 
-import { jest } from '@jest/globals';
+import { jest } from '@jest/globals'
 
-// ── Mocks ─────────────────────────────────────────────────────────────────────
+// ── Mocks ──────────────────────────────────────────────────────────────────────
 jest.unstable_mockModule('../src/models/User.js', () => {
   const mockUser = {
     _id: 'user123',
@@ -15,173 +14,156 @@ jest.unstable_mockModule('../src/models/User.js', () => {
     role: 'user',
     createdAt: new Date().toISOString(),
     matchPassword: jest.fn(),
-  };
-
+  }
   return {
-    default: {
-      findOne: jest.fn(),
-      findById: jest.fn(),
-      create: jest.fn(),
-    },
+    default: { findOne: jest.fn(), findById: jest.fn(), create: jest.fn() },
     __mockUser: mockUser,
-  };
-});
+  }
+})
 
 jest.unstable_mockModule('../src/utils/generateToken.js', () => ({
   default: jest.fn(() => 'mocked.jwt.token'),
-}));
+}))
 
-// ── Importar después del mock ─────────────────────────────────────────────────
-const { registerUser, loginUser, getUserProfile } = await import(
-  '../src/controllers/authController.js'
-);
-const UserModule = await import('../src/models/User.js');
-const User = UserModule.default;
-const mockUser = UserModule.__mockUser;
+// ── Imports tras mocks ─────────────────────────────────────────────────────────
+const { registerUser, loginUser, getUserProfile } = await import('../src/controllers/authController.js')
+const UserModule = await import('../src/models/User.js')
+const User     = UserModule.default
+const mockUser = UserModule.__mockUser
 
-// ── Helper res mock ────────────────────────────────────────────────────────────
+// ── Helper: ejecuta un controller que usa asyncHandler ─────────────────────────
+// asyncHandler captura el throw y llama next(err). Aquí lo simulamos igual.
+const run = (controller, req, res) =>
+  new Promise((resolve) => {
+    const next = (err) => { res.__err = err; resolve({ err }) }
+    Promise.resolve(controller(req, res, next))
+      .then(() => resolve({}))
+      .catch((err) => { next(err); resolve({ err }) })
+  })
+
 const buildRes = () => {
-  const res = { statusCode: 200 };
-  res.status = jest.fn((code) => { res.statusCode = code; return res; });
-  res.json = jest.fn().mockReturnValue(res);
-  return res;
-};
+  const res = { statusCode: 200, __err: null }
+  res.status = jest.fn((code) => { res.statusCode = code; return res })
+  res.json   = jest.fn().mockReturnValue(res)
+  return res
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('AUTH › registerUser', () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => jest.clearAllMocks())
 
   it('201 → registra usuario correctamente', async () => {
-    User.findOne.mockResolvedValue(null);
-    User.create.mockResolvedValue({ ...mockUser });
+    User.findOne.mockResolvedValue(null)
+    User.create.mockResolvedValue({ ...mockUser })
 
-    const req = { body: { name: 'Jaider Test', email: 'jaider@test.com', password: 'pass123' } };
-    const res = buildRes();
+    const req = { body: { name: 'Jaider Test', email: 'jaider@test.com', password: 'pass123' } }
+    const res = buildRes()
+    await run(registerUser, req, res)
 
-    await registerUser(req, res, jest.fn());
-
-    expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true })
-    );
-  });
+    expect(res.status).toHaveBeenCalledWith(201)
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
+  })
 
   it('400 → email ya registrado', async () => {
-    User.findOne.mockResolvedValue(mockUser);
+    User.findOne.mockResolvedValue(mockUser)
 
-    const req = { body: { name: 'Jaider Test', email: 'jaider@test.com', password: 'pass123' } };
-    const res = buildRes();
-    const next = jest.fn();
+    const req = { body: { name: 'Jaider Test', email: 'jaider@test.com', password: 'pass123' } }
+    const res = buildRes()
+    await run(registerUser, req, res)
 
-    await registerUser(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(next).toHaveBeenCalledWith(expect.any(Error));
-  });
-});
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.__err).toBeInstanceOf(Error)
+  })
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('AUTH › loginUser', () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => jest.clearAllMocks())
 
   it('200 → login exitoso retorna token', async () => {
-    mockUser.matchPassword.mockResolvedValue(true);
-    User.findOne.mockResolvedValue(mockUser);
+    mockUser.matchPassword.mockResolvedValue(true)
+    User.findOne.mockResolvedValue(mockUser)
 
-    const req = { body: { email: 'jaider@test.com', password: 'pass123' } };
-    const res = buildRes();
-
-    await loginUser(req, res, jest.fn());
+    const req = { body: { email: 'jaider@test.com', password: 'pass123' } }
+    const res = buildRes()
+    await run(loginUser, req, res)
 
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ success: true, data: expect.objectContaining({ token: 'mocked.jwt.token' }) })
-    );
-  });
+    )
+  })
 
-  it('401 → credenciales incorrectas', async () => {
-    User.findOne.mockResolvedValue(null);
+  it('401 → usuario no existe', async () => {
+    User.findOne.mockResolvedValue(null)
 
-    const req = { body: { email: 'wrong@test.com', password: 'wrongpass' } };
-    const res = buildRes();
-    const next = jest.fn();
+    const req = { body: { email: 'wrong@test.com', password: 'wrongpass' } }
+    const res = buildRes()
+    await run(loginUser, req, res)
 
-    await loginUser(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).toHaveBeenCalledWith(expect.any(Error));
-  });
+    expect(res.status).toHaveBeenCalledWith(401)
+    expect(res.__err).toBeInstanceOf(Error)
+  })
 
   it('401 → contraseña incorrecta', async () => {
-    mockUser.matchPassword.mockResolvedValue(false);
-    User.findOne.mockResolvedValue(mockUser);
+    mockUser.matchPassword.mockResolvedValue(false)
+    User.findOne.mockResolvedValue(mockUser)
 
-    const req = { body: { email: 'jaider@test.com', password: 'badpass' } };
-    const res = buildRes();
-    const next = jest.fn();
+    const req = { body: { email: 'jaider@test.com', password: 'badpass' } }
+    const res = buildRes()
+    await run(loginUser, req, res)
 
-    await loginUser(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).toHaveBeenCalledWith(expect.any(Error));
-  });
-});
+    expect(res.status).toHaveBeenCalledWith(401)
+    expect(res.__err).toBeInstanceOf(Error)
+  })
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('AUTH › getUserProfile', () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => jest.clearAllMocks())
 
   it('200 → devuelve perfil del usuario autenticado', async () => {
-    User.findById.mockResolvedValue(mockUser);
+    User.findById.mockResolvedValue(mockUser)
 
-    const req = { user: { _id: 'user123' } };
-    const res = buildRes();
+    const req = { user: { _id: 'user123' } }
+    const res = buildRes()
+    await run(getUserProfile, req, res)
 
-    await getUserProfile(req, res, jest.fn());
-
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true })
-    );
-  });
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
+  })
 
   it('404 → usuario no encontrado en DB', async () => {
-    User.findById.mockResolvedValue(null);
+    User.findById.mockResolvedValue(null)
 
-    const req = { user: { _id: 'nonexistent' } };
-    const res = buildRes();
-    const next = jest.fn();
+    const req = { user: { _id: 'nonexistent' } }
+    const res = buildRes()
+    await run(getUserProfile, req, res)
 
-    await getUserProfile(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(next).toHaveBeenCalledWith(expect.any(Error));
-  });
-});
+    expect(res.status).toHaveBeenCalledWith(404)
+    expect(res.__err).toBeInstanceOf(Error)
+  })
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('AUTH Middleware › protect', () => {
-  afterEach(() => jest.clearAllMocks());
+  const { protect } = await import('../src/middleware/authMiddleware.js')
+
+  afterEach(() => jest.clearAllMocks())
 
   it('401 → sin header Authorization', async () => {
-    const { protect } = await import('../src/middleware/authMiddleware.js');
-    const req = { headers: {} };
-    const res = buildRes();
-    const next = jest.fn();
+    const req = { headers: {} }
+    const res = buildRes()
+    await run(protect, req, res)
 
-    await protect(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).toHaveBeenCalledWith(expect.any(Error));
-  });
+    expect(res.status).toHaveBeenCalledWith(401)
+    expect(res.__err).toBeInstanceOf(Error)
+  })
 
   it('401 → token malformado', async () => {
-    const { protect } = await import('../src/middleware/authMiddleware.js');
-    const req = { headers: { authorization: 'Bearer tokenmalformado' } };
-    const res = buildRes();
-    const next = jest.fn();
+    const req = { headers: { authorization: 'Bearer tokenmalformado' } }
+    const res = buildRes()
+    await run(protect, req, res)
 
-    await protect(req, res, next);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).toHaveBeenCalledWith(expect.any(Error));
-  });
-});
+    expect(res.status).toHaveBeenCalledWith(401)
+    expect(res.__err).toBeInstanceOf(Error)
+  })
+})
