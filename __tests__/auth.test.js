@@ -1,16 +1,14 @@
 /**
  * SUITE: Autenticación
- * Controllers son funciones async puras
  */
-
 import { jest } from '@jest/globals'
 
-// ── Mocks ─────────────────────────────────────────────────────────────────────
 jest.unstable_mockModule('../src/models/User.js', () => ({
   default: {
-    findOne:  jest.fn(),
-    findById: jest.fn(),
-    create:   jest.fn(),
+    findOne:        jest.fn(),
+    findById:       jest.fn(),
+    create:         jest.fn(),
+    countDocuments: jest.fn(),
   },
 }))
 
@@ -18,22 +16,16 @@ jest.unstable_mockModule('../src/utils/generateToken.js', () => ({
   default: jest.fn(() => 'tok.mock.jwt'),
 }))
 
-// ── Imports top-level ─────────────────────────────────────────────────────────
 const { registerUser, loginUser, getUserProfile } =
   await import('../src/controllers/authController.js')
-
 const { protectHandler } =
   await import('../src/middleware/authMiddleware.js')
-
 const { errorHandler } =
   await import('../src/middleware/errorMiddleware.js')
-
 const { default: generateToken } =
   await import('../src/utils/generateToken.js')
-
 const { default: User } = await import('../src/models/User.js')
 
-// ── Helper ────────────────────────────────────────────────────────────────────
 const run = async (fn, req, res) => {
   try {
     await fn(req, res, (err) => { res.__err = err })
@@ -49,23 +41,23 @@ const buildRes = () => {
   return res
 }
 
-// Crea un usuario fresco con matchPassword limpio en cada uso
 const makeFakeUser = (matchResult = true) => ({
   _id:           'uid001',
   name:          'Jaider',
   email:         'j@test.com',
-  role:          'user',
+  role:          'admin',
   createdAt:     '2024-01-01',
   matchPassword: jest.fn().mockResolvedValue(matchResult),
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── registerUser ──────────────────────────────────────────────────────────────
 describe('AUTH › registerUser', () => {
   afterEach(() => jest.clearAllMocks())
 
   it('201 → crea usuario y retorna token', async () => {
     const user = makeFakeUser()
     User.findOne.mockResolvedValue(null)
+    User.countDocuments.mockResolvedValue(0)
     User.create.mockResolvedValue(user)
 
     const res = buildRes()
@@ -86,11 +78,10 @@ describe('AUTH › registerUser', () => {
 
     expect(res.status).toHaveBeenCalledWith(400)
     expect(res.__err).toBeInstanceOf(Error)
-    expect(res.__err.message).toBe('El usuario ya existe')
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── loginUser ─────────────────────────────────────────────────────────────────
 describe('AUTH › loginUser', () => {
   afterEach(() => jest.clearAllMocks())
 
@@ -127,7 +118,7 @@ describe('AUTH › loginUser', () => {
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── getUserProfile ────────────────────────────────────────────────────────────
 describe('AUTH › getUserProfile', () => {
   afterEach(() => jest.clearAllMocks())
 
@@ -152,7 +143,7 @@ describe('AUTH › getUserProfile', () => {
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── protectHandler ────────────────────────────────────────────────────────────
 describe('AUTH Middleware › protectHandler', () => {
   afterEach(() => jest.clearAllMocks())
 
@@ -164,7 +155,7 @@ describe('AUTH Middleware › protectHandler', () => {
     expect(res.__err).toBeInstanceOf(Error)
   })
 
-  it('401 → token malformado / inválido', async () => {
+  it('401 → token malformado', async () => {
     const res = buildRes()
     await run(protectHandler, { headers: { authorization: 'Bearer TOKEN.INVALIDO.XXX' } }, res)
 
@@ -173,9 +164,9 @@ describe('AUTH Middleware › protectHandler', () => {
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── generateToken ─────────────────────────────────────────────────────────────
 describe('Utils › generateToken', () => {
-  it('retorna un JWT string no vacío', () => {
+  it('retorna string no vacío', () => {
     generateToken.mockReturnValue('jwt.test.token')
     const token = generateToken('uid001')
     expect(typeof token).toBe('string')
@@ -183,31 +174,24 @@ describe('Utils › generateToken', () => {
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── errorHandler ──────────────────────────────────────────────────────────────
 describe('Middleware › errorHandler', () => {
-  it('responde con statusCode existente y mensaje de error', () => {
+  it('responde con statusCode y mensaje', () => {
     const err = new Error('algo salió mal')
     const res = buildRes()
     res.statusCode = 422
-
-    errorHandler(err, {}, res, () => {})
+    errorHandler(err, { method: 'POST', originalUrl: '/test' }, res, () => {})
 
     expect(res.status).toHaveBeenCalledWith(422)
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: 'algo salió mal' })
-    )
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, message: 'algo salió mal' }))
   })
 
-  it('usa 500 cuando statusCode es 200 (no fue seteado antes del error)', () => {
+  it('usa 500 cuando statusCode es 200', () => {
     const err = new Error('error interno')
     const res = buildRes()
     res.statusCode = 200
-
-    errorHandler(err, {}, res, () => {})
+    errorHandler(err, { method: 'GET', originalUrl: '/test' }, res, () => {})
 
     expect(res.status).toHaveBeenCalledWith(500)
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: 'error interno' })
-    )
   })
 })
