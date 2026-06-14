@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/errorMiddleware.js';
 import authRoutes from './routes/authRoutes.js';
 import movementRoutes from './routes/movementRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 dotenv.config();
 
@@ -35,15 +36,16 @@ app.use(
 
 app.use(express.json());
 
-// ─── Health Check — debe ir ANTES de cualquier middleware de seguridad ────────
+// ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
 // ─── Rutas ───────────────────────────────────────────────────────────────────
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/auth',      authRoutes);
+app.use('/api/v1/products',  productRoutes);
 app.use('/api/v1/movements', movementRoutes);
+app.use('/api/v1/users',     userRoutes);
 
 // ─── Error handler global ─────────────────────────────────────────────────────
 app.use(errorHandler);

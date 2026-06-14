@@ -7,19 +7,19 @@ import {
   updateProduct,
 } from '../controllers/productController.js';
 import asyncHandler from '../middleware/asyncHandler.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { authorizeAdmin, protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.use(protect);
 
-router.route('/')
-  .post(asyncHandler(createProduct))
-  .get(asyncHandler(getProducts));
+// Todos pueden ver productos
+router.get('/',    asyncHandler(getProducts));
+router.get('/:id', asyncHandler(getProductById));
 
-router.route('/:id')
-  .get(asyncHandler(getProductById))
-  .put(asyncHandler(updateProduct))
-  .delete(asyncHandler(deleteProduct));
+// Solo admin puede crear, editar, eliminar
+router.post('/',       authorizeAdmin, asyncHandler(createProduct));
+router.put('/:id',     authorizeAdmin, asyncHandler(updateProduct));
+router.delete('/:id',  authorizeAdmin, asyncHandler(deleteProduct));
 
 export default router;
