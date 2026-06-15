@@ -1,7 +1,9 @@
+import asyncHandler from './asyncHandler.js';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
-import asyncHandler from './asyncHandler.js';
+
+const ADMIN_EMAIL = 'candeloj2002@gmail.com';
 
 export const protectHandler = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -35,3 +37,12 @@ export const protectHandler = async (req, res, next) => {
 };
 
 export const protect = asyncHandler(protectHandler);
+
+// 403 → solo el admin fijo puede gestionar usuarios
+export const onlyAdmin = asyncHandler(async (req, res, next) => {
+  if (req.user && req.user.email === ADMIN_EMAIL) {
+    return next();
+  }
+  res.status(403);
+  throw new Error('Acceso denegado: solo el administrador puede realizar esta acción');
+});

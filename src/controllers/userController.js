@@ -1,12 +1,14 @@
 import User from '../models/User.js';
 
-// GET /api/v1/users — solo admin
+const ADMIN_EMAIL = 'candeloj2002@gmail.com';
+
+// GET /api/v1/users
 export const getUsers = async (req, res) => {
   const users = await User.find({}).select('-password').sort({ createdAt: -1 });
   res.json({ success: true, data: users });
 };
 
-// POST /api/v1/users — admin crea vendedor
+// POST /api/v1/users
 export const createVendedor = async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -29,7 +31,7 @@ export const createVendedor = async (req, res) => {
   });
 };
 
-// DELETE /api/v1/users/:id — admin elimina vendedor
+// DELETE /api/v1/users/:id
 export const deleteUser = async (req, res) => {
   const user = await User.findById(req.params.id);
 
@@ -38,16 +40,16 @@ export const deleteUser = async (req, res) => {
     throw new Error('Usuario no encontrado');
   }
 
-  if (user.role === 'admin') {
+  if (user.email === ADMIN_EMAIL) {
     res.status(403);
-    throw new Error('No puedes eliminar a un administrador');
+    throw new Error('No puedes eliminar al administrador principal');
   }
 
   await user.deleteOne();
-  res.json({ success: true, message: 'Vendedor eliminado correctamente' });
+  res.json({ success: true, message: 'Usuario eliminado correctamente' });
 };
 
-// PUT /api/v1/users/:id/reset-password — admin resetea contraseña
+// PUT /api/v1/users/:id/reset-password
 export const resetPassword = async (req, res) => {
   const { password } = req.body;
 

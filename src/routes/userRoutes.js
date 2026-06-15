@@ -6,11 +6,13 @@ import {
   resetPassword,
 } from '../controllers/userController.js';
 import asyncHandler from '../middleware/asyncHandler.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { onlyAdmin, protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+// Todas las rutas de usuarios requieren auth + ser el admin fijo
 router.use(protect);
+router.use(onlyAdmin);
 
 router.route('/')
   .get(asyncHandler(getUsers))

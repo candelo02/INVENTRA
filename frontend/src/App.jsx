@@ -9,6 +9,15 @@ import ProductsPage from './pages/ProductsPage'
 import SetupPage from './pages/SetupPage'
 import UsersPage from './pages/UsersPage'
 
+const ADMIN_EMAIL = 'candeloj2002@gmail.com'
+
+function AdminRoute({ children }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (user.email !== ADMIN_EMAIL) return <Navigate to="/dashboard" replace />
+  return children
+}
+
 export default function App() {
   const { user } = useAuth()
 
@@ -22,7 +31,7 @@ export default function App() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="products"  element={<ProductsPage />} />
         <Route path="movements" element={<MovementsPage />} />
-        <Route path="users"     element={<UsersPage />} />
+        <Route path="users"     element={<AdminRoute><UsersPage /></AdminRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} />} />

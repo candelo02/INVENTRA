@@ -3,16 +3,22 @@ import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-const NAV = [
+const ADMIN_EMAIL = 'candeloj2002@gmail.com'
+
+const NAV_BASE = [
   { to: '/dashboard', icon: BarChart2,  label: 'Dashboard'   },
   { to: '/products',  icon: BoxIcon,    label: 'Productos'   },
   { to: '/movements', icon: TrendingUp, label: 'Movimientos' },
-  { to: '/users',     icon: Users,      label: 'Usuarios'    },
 ]
+
+const NAV_ADMIN_EXTRA = { to: '/users', icon: Users, label: 'Usuarios' }
 
 export default function AppLayout() {
   const { user, logout } = useAuth()
   const [open, setOpen]  = useState(false)
+
+  const isAdmin = user?.email === ADMIN_EMAIL
+  const NAV = isAdmin ? [...NAV_BASE, NAV_ADMIN_EXTRA] : NAV_BASE
 
   return (
     <div className="layout">
