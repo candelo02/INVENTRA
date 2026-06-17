@@ -14,12 +14,14 @@ jobs:
 
     steps:
       - name: Deploy Backend a Render
+        env:
+          HOOK: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}
         run: |
-          curl -s -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}" \
+          curl -s -X POST "$HOOK" \
             -H "Content-Type: application/json" \
             --fail
       - name: Confirmar deploy backend
-        run: echo "✅ Backend desplegado en Render"
+        run: echo "Backend desplegado en Render"
 
   deploy-frontend:
     name: Deploy Frontend → Render
@@ -29,9 +31,11 @@ jobs:
 
     steps:
       - name: Deploy Frontend a Render
+        env:
+          HOOK: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}
         run: |
-          curl -s -X POST "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}" \
+          curl -s -X POST "$HOOK" \
             -H "Content-Type: application/json" \
             --fail
       - name: Confirmar deploy frontend
-        run: echo "✅ Frontend desplegado en Render"
+        run: echo "Frontend desplegado en Render"
